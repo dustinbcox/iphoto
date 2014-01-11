@@ -30,6 +30,44 @@ def convert_timer_interval(seconds):
     # http://www.tablix.org/~avian/blog/archives/2011/02/to_mac_and_back_again/
     return datetime.datetime(2001, 1, 1) + datetime.timedelta(seconds=seconds)
 
+def timerinterval_to_datetime(data):
+    """Convert all fields with AsTimerInterval into python datetimes,
+
+    { 'image_id': {'Caption': 'filename_without_ext_usually',
+                   'Comment': ' ',
+                   'DateAsTimerInterval': seconds.0,
+                   'DateAsTimerIntervalGMT': seconds.0,
+                   'GUID': 'base64',
+                   'ImagePath': 'local_filepath_to_image',
+                   'MediaType': 'Image',
+                   'MetaModDateAsTimerInterval': seconds.1234,
+                   'ModDateAsTimerInterval': seconds.4567,
+                   'Rating': 0,
+                   'Roll': 55,
+                   'ThumbPath': 'local_filepath_to_thumb'},
+
+    Internally it will converted self._images{} for each image:
+    { 'image_id': {'Caption': 'filename_without_ext_usually',
+                   'Comment': ' ',
+                   'Date': datetime.datetime(),
+                   'DateGMT': datetime.datetime(),
+                   'GUID': 'base64',
+                   'ImagePath': 'local_filepath_to_image',
+                   'MediaType': 'Image',
+                   'MetaModDate': datetime.datetime(),
+                   'ModDate': datetime.datetime(),
+                   'Rating': 0,
+                   'Roll': 55,
+                   'ThumbPath': 'local_filepath_to_thumb'},
+
+    """
+    for key in data:
+        if 'AsTimerInterval' in key:
+            new_key = key.replace('AsTimerInterval', '')
+            data[new_key] = convert_timer_interval(data[key])
+            del data[key]
+    return data
+
 
 class IPhoto(object):
     """ OS X iPhoto support """
@@ -50,7 +88,7 @@ class IPhoto(object):
         master_image_list = database['Master Image List']
         for image_id in master_image_list:
             self._images[image_id] = \
-                self._rewrite_date_fields(master_image_list[image_id])
+                timerinterval_to_datetime(master_image_list[image_id])
 
         # { AlbumName: { 'photos': ["image_id", "image_id"], }
         for album in database['List of Albums']:
@@ -59,50 +97,6 @@ class IPhoto(object):
             self._albums[album['AlbumName']] = {'photos': album['KeyList'],
                                                 'count': album['PhotoCount'],
                                                 'id': album['AlbumId']}
-
-    def _rewrite_date_fields(self, photo_data):
-        """ Internal method to convert AsTimerInterval into python datetimes,
-        the photo_data dict with keynames "XYZAsTimerInterval" will be saved
-        just as XYZ.
-
-        { 'image_id': {'Caption': 'filename_without_ext_usually',
-                        'Comment': ' ',
-                        'DateAsTimerInterval': seconds.0,
-                        'DateAsTimerIntervalGMT': seconds.0,
-                        'GUID': 'base64',
-                        'ImagePath': 'local_filepath_to_image',
-                        'MediaType': 'Image',
-                        'MetaModDateAsTimerInterval': seconds.1234,
-                        'ModDateAsTimerInterval': seconds.4567,
-                        'Rating': 0,
-                        'Roll': 55,
-                        'ThumbPath': 'local_filepath_to_thumb'},
-
-        Internally it will converted self._images{} for each image:
-         { 'image_id': {'Caption': 'filename_without_ext_usually',
-                        'Comment': ' ',
-                        'Date': datetime.datetime(),
-                        'DateGMT': datetime.datetime(),
-                        'GUID': 'base64',
-                        'ImagePath': 'local_filepath_to_image',
-                        'MediaType': 'Image',
-                        'MetaModDate': datetime.datetime(),
-                        'ModDate': datetime.datetime(),
-                        'Rating': 0,
-                        'Roll': 55,
-                        'ThumbPath': 'local_filepath_to_thumb'},
-
-
-        """
-        for old_key, new_key in (('ModDateAsTimerInterval', 'ModDate'),
-                                 ('DateAsTimerInterval', 'Date'),
-                                 ('MetaModDateAsTimerInterval', 'MetaModDate'),
-                                 ('DateAsTimerIntervalGMT', 'DateGMT')):
-            if old_key in photo_data:
-                photo_data[new_key] = \
-                    convert_timer_interval(photo_data[old_key])
-                del photo_data[old_key]
-        return photo_data
 
     def albums(self):
         """ Iterate over album names """
@@ -147,10 +141,11 @@ def main():
     args = parser.parse_args()
 
     iphoto = IPhoto()
+    pprinter = pprint.PrettyPrinter()
     if args.album:
         for album_name in args.album:
             for photos in iphoto.photos(album_name):
-                pprint.PrettyPrinter().pprint(photos)
+                pprinter.pprint(photos)
     elif args.list:
         for albums in iphoto.albums():
             print albums
