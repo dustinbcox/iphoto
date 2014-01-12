@@ -22,6 +22,8 @@ import datetime
 import plistlib
 import pprint
 import os
+import json
+import sys
 
 
 def convert_timer_interval(seconds):
@@ -29,6 +31,7 @@ def convert_timer_interval(seconds):
     # Referenced:
     # http://www.tablix.org/~avian/blog/archives/2011/02/to_mac_and_back_again/
     return datetime.datetime(2001, 1, 1) + datetime.timedelta(seconds=seconds)
+
 
 def timerinterval_to_datetime(data):
     """Convert all fields with AsTimerInterval into python datetimes,
@@ -131,6 +134,17 @@ class IPhoto(object):
             yield self._images[photo]
 
 
+class DatetimeEncoder(json.JSONEncoder):
+    """ Handle Python datetime when converting to JSON """
+    # Source: http://stackoverflow.com/questions/8011081/ \
+    #         cannot-serialize-datetime-as-json-from-cherrypy
+    def default(self, obj):
+        if hasattr(obj, 'isoformat'):
+            return obj.isoformat()
+        else:
+            return json.JSONEncoder.default(self, obj)
+
+
 def main():
     """ Main entry point, if called directly """
     parser = argparse.ArgumentParser(description="iPhoto library")
@@ -138,20 +152,33 @@ def main():
                         help='Select only specific album(s)')
     parser.add_argument('-l', '--list', action='store_true',
                         help="List albums")
+    parser.add_argument('-f', '--format', choices=['text', 'json'],
+                        default='text',
+                        help='Output format type. The default is text')
     args = parser.parse_args()
-
     iphoto = IPhoto()
-    pprinter = pprint.PrettyPrinter()
     if args.album:
-        for album_name in args.album:
-            for photos in iphoto.photos(album_name):
-                pprinter.pprint(photos)
+        if args.format == 'json':
+            output = {}
+            for album_name in args.album:
+                output[album_name] = list(iphoto.photos(album_name))
+            json.dump(output, sys.stdout, indent=2, cls=DatetimeEncoder)
+        elif args.format == 'text':
+            pprinter = pprint.PrettyPrinter(indent=2)
+            for album in args.album:
+                for photo in iphoto.photos(album):
+                    print("--[ Album: {0} : Photo {1} ] ----------------".
+                          format(album, photo['GUID']))
+                    pprinter.pprint(photo)
     elif args.list:
-        for albums in iphoto.albums():
-            print albums
+        output = sorted(list(iphoto.albums()))
+        if args.format == 'json':
+            json.dump(output, sys.stdout, indent=2)
+        elif args.format == 'text':
+            for album in output:
+                print album
     else:
         parser.print_usage()
-
 
 if __name__ == "__main__":
     main()
