@@ -1,5 +1,20 @@
 """Unit testing for IPhoto"""
 
+# Copyright (C) 2013 Dustin B. Cox <dustin@dustinbcox.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from ..iphoto import IPhoto, plistlib, convert_timer_interval, \
     timerinterval_to_datetime
 import unittest
@@ -34,7 +49,12 @@ class TestIPhoto(unittest.TestCase):
     # pylint: disable=W0221
     @patch.object(plistlib, 'readPlist')
     def setUp(self, mock):
-        """ initialize self.iphoto with MOCK_DATABASE"""
+        """ initialize self.iphoto with MOCK_DATABASE
+
+        Args:
+            mock (mock): mock for readPlist
+
+        """
         mock.return_value = MOCK_DATABASE
         self.iphoto = IPhoto()
 

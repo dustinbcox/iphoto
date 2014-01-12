@@ -4,6 +4,8 @@
 include/
 man/
 
+doc/build/
+
 # Packages
 *.egg
 *.egg-info
