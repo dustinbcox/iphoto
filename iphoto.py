@@ -220,8 +220,8 @@ def main():
             pprinter = pprint.PrettyPrinter(indent=2)
             for album in args.album:
                 for photo in iphoto.photos(album):
-                    print("--[ Album: {0} : Photo {1} ] ----------------".
-                          format(album, photo['GUID']))
+                    print(("--[ Album: {0} : Photo {1} ] ----------------".
+                          format(album, photo['GUID'])))
                     pprinter.pprint(photo)
     elif args.list:
         output = sorted(list(iphoto.albums()))
@@ -229,7 +229,7 @@ def main():
             json.dump(output, sys.stdout, indent=2)
         elif args.format == 'text':
             for album in output:
-                print album
+                print(album)
     else:
         parser.print_usage()
 
